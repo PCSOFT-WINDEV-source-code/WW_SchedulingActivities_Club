@@ -1,0 +1,231 @@
+#To edit and compare internal_properties, use WINDEV integrated tools.
+#Internal properties refer to the properties of controls in windows, reports, etc.
+info :
+ name : SiteConfig
+ major_version : 28
+ minor_version : 0
+ type : 7
+ description : ""
+ subtype : 0
+procedure_set :
+ identifier : 0x141da5910564986a
+ internal_properties : CAAAAAgAAABGLu41kG7fjQV3iS4F72qmnKaNh5694reolNKIW0iw
+ code_elements :
+  type_code : 31
+  p_codes :
+   -
+     code : |1-
+      
+      global
+      	// Manage the current user
+      	gsNameCurrentUser is string
+      	
+      constant
+      	csAdmin_Administrator_Login	= "ADMIN_USERNAME"					// Administrator login
+      	csAdmin_Administrator_PWD		= "ADMIN_PASSWORD"					// Administrator PWD
+      	csAdmin_Default_Login			= "admin"						// Default login
+      end
+     type : 720896
+  procedures :
+   -
+     name : GetSiteParameter
+     procedure_id : 1449496697362552938
+     type_code : 15
+     code : |1+
+      // Summary: Retrieve a parameter for the site configuration
+      // Syntax:
+      //[ <Result> = ] GetSiteParameter (<sParameterName> [, <sDefaultValue>])
+      //
+      // Parameters:
+      //	sParameterName: Name of the parameter (see the constants..)
+      //	sDefaultValue (default value=""): Default value to return
+      // Return value:
+      // 	Undefined type: Value of the parameter
+      //
+      
+      procedure GetSiteParameter(sParameterName,sDefaultValue = "")
+      
+      // Search for the parameter
+      HReadSeekFirst(SITE_CONFIGURATION,Parameter_Name,sParameterName)
+      if HFound(SITE_CONFIGURATION) then
+      	
+      	// According to the type of parameter	
+      	switch SITE_CONFIGURATION.ParameterType
+      		// Integer
+      		case CN_INTEGER
+      			// Returns the integer value of this parameter
+      			return SITE_CONFIGURATION.IntegerValue
+      			
+      		// Binary
+      		case CN_BINARY
+      			// Returns the binary value of this parameter
+      			return SITE_CONFIGURATION.BinaryValue
+      			
+      		// String
+      		case CN_STRING
+      			// Returns the string value of this parameter
+      			return SITE_CONFIGURATION.StringValue
+      			
+      		// Real
+      		case CN_REAL		
+      			// Returns the real value of this parameter
+      			return SITE_CONFIGURATION.RealValue
+      			
+      		// Unknown case
+      		other case
+      			// Indicates that the default value is used outside the banner and logo
+      			dbgAssert(False,"Unknown type of configuration parameter")
+      			
+      			
+      	end
+      else
+      	dbgAssert(False,"Parameter not found in database: the default value will be used")	
+      	
+      end
+      
+      
+      // Return an empty string by default if nothing is found or if the type of value is not correct
+      // No problem if the expected value is a string value or a binary value
+      // It will be set to 0 if the expected value is an integer value or a real value
+      return sDefaultValue
+     type : 458752
+   -
+     name : SaveSiteParameter
+     internal_properties : CAAAAAgAAADII9SyL0x4mTami63qmvu++/D8vHofof6pxITVFSzOOsDPIdRZHqRNzPTmkLYSZdpwQDxlrkLZ8+wYyV6E0MQZAzxaisR2g7pqEs7yvHVezU6jiQVN1qOwTCEMDgPMVnczgpEjxBnlnpCLBgUMAMnolePvgkj7B6Dl0hFtymHPRo5A4moHpq0I/Gkr8TRU9Y2r8gX4K6A=
+     procedure_id : 1449496697362618474
+     type_code : 15
+     code : |1-
+      // Summary: Save a parameter for the site configuration
+      // Syntax:
+      //[ <Result> = ] SaveSiteParameter (<sParameterName>, <sValue>, <nType>)
+      //
+      // Parameters:
+      //	sParameterName: Name of the parameter
+      //	sValue: Value that must be assigned to this parameter
+      //	nType: Type of the parameter
+      // Return value:
+      // 	boolean: True if the parameter was saved, False otherwise
+      //
+      // Automatic process of exceptions:   run CASE EXCEPTION:
+      //
+      
+      procedure SaveSiteParameter(sParameterName, sValue, nType)
+      
+      
+      nWholeValue is int
+      cyRealValue is currency
+      
+      
+      // Do we have to caste the value?
+      switch nType
+      
+      	case CN_BINARY, CN_STRING
+      		// No action
+      		
+      	case CN_REAL
+      		// Caste the value into a currency
+      		cyRealValue = sValue
+      		
+      	case CN_INTEGER
+      		
+      		// Cast the value into an integer
+      		nWholeValue = sValue
+      		
+      	other case
+      		// The type is unknown, return False		
+      		AddError("Unknown type of parameter")
+      		return False
+      end
+      
+      
+      // Search for the parameter in the configuration file
+      HReadSeekFirst(SITE_CONFIGURATION,Parameter_Name,sParameterName)
+      
+      // Refresh the parameters
+      HReset()
+      SITE_CONFIGURATION.Parameter_Name = sParameterName
+      SITE_CONFIGURATION.ParameterType = nType
+      
+      switch nType
+      	case CN_BINARY
+      		// Attach the memo
+      		HLinkMemo(SITE_CONFIGURATION,BinaryValue,sValue)
+      	
+      	case CN_STRING
+      	
+      		SITE_CONFIGURATION.StringValue = sValue
+      	
+      	case CN_REAL
+      	
+      		SITE_CONFIGURATION.RealValue = cyRealValue
+      		
+      	case CN_INTEGER
+      		
+      		SITE_CONFIGURATION.IntegerValue = nWholeValue
+      		
+      	other case
+      		
+      end
+      
+      
+      // Do we have to modify it or to add it?
+      if HFound(SITE_CONFIGURATION) then
+      	// Parameter found: it must be modified
+      	if HModify(SITE_CONFIGURATION) = False then
+      		AddError("Unable to modify parameter")
+      		return False
+      	else
+      		return True
+      	end
+      
+      else
+      	// Parameter not found: it must be added
+      	if HAdd(SITE_CONFIGURATION) = False then
+      		AddError("Unable to add parameter")
+      		return False		
+      	else
+      		return True
+      	end
+      
+      end
+      
+      case exception:
+      	dbgAssert(False,"Exception not handled when saving the parameter")
+      	AddError("Exception detected",ExceptionInfo())
+      	return False
+     type : 458752
+   -
+     name : bIsConnectedAsAdmin
+     procedure_id : 1449496697362684010
+     type_code : 15
+     code : |1-
+      // Summary: Are we identified as administrator?
+      // Syntax:
+      //[ <Result> = ] bIsConnectedAsAdmin ()
+      //
+      // Parameters:
+      //	None
+      // Return value:
+      // 	boolean: True if connected administrator, False otherwise
+      //
+      
+      procedure restreint bIsConnectedAsAdmin()
+      
+      // Check the rights
+      if gsNameCurrentUser <> "" then
+      	return True
+      else
+      	return False
+      end
+     type : 458752
+  procedure_templates : []
+  property_templates : []
+ code_parameters :
+  internal_properties : CAAAAAgAAACVGQgYbalU7DKC3oH4ItDrjtcTHXXV/EuH8q0IbhyQlw==
+  original_name : COL_SansNom1
+resources :
+ string_res :
+  identifier : 0x10f6dba505bd2fce
+  internal_properties : CAAAAAgAAACm76HWfKGWp33VjXInA4cRlqArlgTTA862QGt72W2ld5Y=
+custom_note :
+ internal_properties : CAAAAAgAAABtB9HWVzrXO2+4NDRVK0vmzaNKrCKqH1DBX30lMmGZ
